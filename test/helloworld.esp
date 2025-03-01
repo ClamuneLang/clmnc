@@ -1,0 +1,5 @@
+#import io
+
+@io.Main()
+func main()
+    io.out null ? "Hello world!";

@@ -1,0 +1,3 @@
+extern func out(s: string): void;
+
+decorator Main() { ... }
