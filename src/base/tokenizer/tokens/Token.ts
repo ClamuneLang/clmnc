@@ -50,6 +50,14 @@ export class Token {
         return this.prev;
     }
 
+    public leaveChainUntil(until: Kind) {
+        for (const t of this.until(until)) t.leaveChain();
+    }
+
+    public inChainNext(predicate: (x: Token) => boolean) {
+        return [...this].reduce((acc, x) => acc += +predicate(x), 0);
+    }
+
     get isKeyword() {
         return this.kind === "identifier" && keywords.includes(this.content as Kind);
     }

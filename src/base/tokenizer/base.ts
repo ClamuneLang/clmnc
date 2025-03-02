@@ -100,6 +100,7 @@ export class Tokenizer {
             case 'y':
             //#endregion IDENTIFIER
             case 'z':
+            case '_':
                 if (this.lastIs("identifier")) this.last.content += c;
                 else this.push("identifier", c);
                 break;

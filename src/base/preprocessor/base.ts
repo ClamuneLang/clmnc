@@ -4,12 +4,13 @@ import { isNull } from "../utils/funcs";
 import { cwd } from "process";
 import { Token } from "../tokenizer/tokens/Token";
 import { Opt } from "../utils/types";
+import { preprocessorInstructionsKinds } from "../tokenizer/tokens/kinds";
 
 export class Preprocessor {
     constructor (
         public mainFile: string,
         public mainLibDir: string = join(cwd(), "../test/lib"),
-        public defines: Record<string, string> = {},
+        public defines: Record<string, Token[]> = {},
     ) {}
 
     private visitedFiles = new Set<string>();
@@ -21,14 +22,20 @@ export class Preprocessor {
         if (isNull(main)) return null;
 
         const ws = new Token("whitespace", "");
+        ws.next = main;
+        main.prev = ws;
 
-        for (let t of main) {
-            switch (t.kind) {
+        for (const t of ws) if (preprocessorInstructionsKinds.includes(t.kind) && [...t.untilPrev("newline")].slice(1).some(x => x.kind !== "whitespace")) t.kind = "unknown";
+
+        const insert = async () => {
+            mainLoop: for (let t of ws) switch (t.kind) {
                 case "hashImport": {
-                    if ([...t.untilPrev("newline")].slice(1).some(x => x.kind !== "whitespace")) continue;
                     let path = [...t.until("newline")].slice(2);
 
-                    if (path.length === 0) continue;
+                    if (path.length === 0) {
+                        t.leaveChainUntil("newline");
+                        break mainLoop;
+                    }
 
                     const p = path.map(x => x.content).join("");
                     const parsed = parse(p);
@@ -40,20 +47,60 @@ export class Preprocessor {
                             join(this.mainLibDir, p);
                     } else finalPath = p;
                     finalPath += ".esp";
-                    if (this.visitedFiles.has(finalPath)) continue;
+
+                    if (this.visitedFiles.has(finalPath)) {
+                        t.leaveChainUntil("newline");
+                        break mainLoop;
+                    }
+
                     const tokens = await new Tokenizer().process(finalPath);
-                    if (isNull(tokens)) continue;
+
+                    if (isNull(tokens)) {
+                        t.leaveChainUntil("newline");
+                        break mainLoop;
+                    }
+
                     let newPrev: Opt<Token> = ws;
+
                     for (const part of t.until("newline")) newPrev = part.leaveChain(ws);
+
                     (newPrev ?? ws).nextChain = [...tokens];
                     t = (newPrev ?? ws);
+
                     this.visitedFiles.add(finalPath);
                     break;
                 }
 
-                // TODO: implement deep import and other preprocessor instructions
+                case "hashSet": {
+                    const chain = [...t.until("newline")].slice(2);
+                    if (chain[0].kind !== "identifier" || chain[1].kind !== "whitespace") {
+                        t.leaveChainUntil("newline");
+                        break mainLoop;
+                    }
+
+                    this.defines[chain[0].content] = chain.slice(2);
+                }
+
+                case "hashUnset": {
+                    const chain = [...t.until("newline")].slice(2);
+                    if (chain[0].kind !== "identifier") {
+                        t.leaveChainUntil("newline");
+                        break mainLoop;
+                    }
+
+                    delete this.defines[chain[0].content];
+                    break;
+                }
+
+                // TODO: Add #if and similar into preprocessor
+                case "hashIf": {
+                    break;
+                }
+
             }
         }
+
+        while (ws.inChainNext(x => preprocessorInstructionsKinds.includes(x.kind))) await insert();
 
         return ws.next;
     }

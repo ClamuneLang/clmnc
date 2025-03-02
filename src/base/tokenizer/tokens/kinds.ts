@@ -71,6 +71,10 @@ export const preprocessorInstructions = [
     "import", "if", "elif", "ifnot", "elifnot",
     "endif", "set", "unset", "pragma"
 ];
+export const preprocessorInstructionsKinds: Kind[] = [
+    "hashImport", "hashIf", "hashElif", "hashIfnot", "hashElifnot",
+    "hashEndif", "hashSet", "hashUnset", "hashPragma"
+];
 
 export const keywords = kinds.slice(kinds.indexOf("if"));
 export const nonKeywords = kinds.slice(0, kinds.indexOf("if"));
