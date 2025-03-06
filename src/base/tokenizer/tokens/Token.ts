@@ -6,8 +6,13 @@ export class Token {
     constructor(
         public kind: Kind,
         public content: string = "",
+        public pos: number,
+        public fileline: number,
+        public line: number,
+        public filepath: string,
         public prev: Opt<Token> = null,
         public next: Opt<Token> = null,
+        public metadata: Record<string, unknown> = {}
     ) {}
 
     *[Symbol.iterator] () {
@@ -19,11 +24,11 @@ export class Token {
         return;
     }
 
-    * until(kind: Kind) {
+    * until(data: Token | Kind | number) {
         let curr: Opt<Token> = this;
-
+        let i = 0;
         do yield curr;
-        while ((curr = curr.next) && curr.kind !== kind);
+        while ((curr = curr.next) && (typeof data === "number" ? (isFinite(i) ? i++ < data : true) : (typeof data === "string" ? curr.kind !== data : curr !== data)));
 
         return;
     }
@@ -50,12 +55,27 @@ export class Token {
         return this.prev;
     }
 
-    public leaveChainUntil(until: Kind) {
-        for (const t of this.until(until)) t.leaveChain();
+    public leaveChainUntil(until: Token | Kind | number, prevIfNull?: Opt<Token>) {
+        let newPrev = prevIfNull;
+        for (const t of this.until(until)) newPrev = t.leaveChain(prevIfNull);
+        return newPrev;
     }
 
-    public inChainNext(predicate: (x: Token) => boolean) {
-        return [...this].reduce((acc, x) => acc += +predicate(x), 0);
+    public inChainNext(values: readonly Kind[]): Opt<Token>
+    public inChainNext(value: Kind): Opt<Token>
+    public inChainNext(predicate: readonly Kind[] | Kind | ((x: Token) => boolean)): Opt<Token> {
+        const p = typeof predicate === "function"
+            ? predicate
+            : (typeof predicate === "string"
+                ? (x: Token) => x.kind === predicate
+                : (Array.isArray(predicate)
+                    ? (x: Token) => predicate.includes(x.kind)
+                    : (x: Token) => false
+                )
+            )
+
+        for (const t of this) if (p(t)) return t;
+        return null;
     }
 
     get isKeyword() {
@@ -77,6 +97,20 @@ export class Token {
         }
         this.next = token;
         token.prev = this;
+    }
+
+    set replaceInsertingNext(token: Opt<Token[]>) {
+        if (!token || token.length === 0) return;
+        const [ f, ...other ] = token;
+        ({
+            kind: this.kind,
+            content: this.content,
+            fileline: this.fileline,
+            pos: this.pos,
+            line: this.line,
+            filepath: this.filepath
+        } = f);
+        this.nextChain = other;
     }
 
     set prevChain(tokens: Opt<Opt<Token>[]>) {

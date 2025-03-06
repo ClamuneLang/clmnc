@@ -7,9 +7,19 @@ import { capitalize, isNull } from "../utils/funcs";
 export class Tokenizer {
     public first: Opt<Token> = null;
     public last:  Opt<Token> = null;
+    private pos: number = 0;
+    private line: number = 1;
+    public startLine: number = this.line;
+    private isNewline = false;
+
+    constructor(public entryFile: string, public isContent = false) {}
+
+    public static async fromContent(content: string) {
+        return await new Tokenizer(content, true).process();
+    }
 
     public push(kind: Kind, content: string) {
-        const newToken = new Token(kind, content);
+        const newToken = new Token(kind, content, this.pos, this.line, this.startLine, this.entryFile);
         if (!this.first) this.first = newToken;
         if (this.last) {
             this.last.next = newToken;
@@ -37,15 +47,27 @@ export class Tokenizer {
         }
     }
 
+    public incrementPos() {
+        if (this.isNewline) {
+            this.pos = -1;
+            this.line++;
+            this.startLine++;
+        }
+
+        this.pos++;
+        this.isNewline = false;
+    }
+
     public lastIs(kind: Kind):     this is { last: Token } { return !isNull(this.last) && this.last.kind === kind;        }
     public lastAre(kinds: Kind[]): this is { last: Token } { return !isNull(this.last) && kinds.includes(this.last.kind); }
 
-    public async process(entryFile: string) {
-        const content = await readFile(entryFile, "utf-8");
+    public async process() {
+        const content = (this.isContent ? this.entryFile : await readFile(this.entryFile, "utf-8"));
 
         if (!content) return null;
 
-        for (const c of content) switch (c) {
+        for (const c of content) {
+            switch (c) {
             //#region IDENTIFIER
             case 'A':
             case 'B':
@@ -98,199 +120,207 @@ export class Tokenizer {
             case 'w':
             case 'x':
             case 'y':
-            //#endregion IDENTIFIER
             case 'z':
-            case '_':
-                if (this.lastIs("identifier")) this.last.content += c;
-                else this.push("identifier", c);
-                break;
+            //#endregion IDENTIFIER
+                case '_':
+                    if (this.lastIs("identifier")) this.last.content += c;
+                    else this.push("identifier", c);
+                    break;
 
-            //#region DIGIT
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-                case '8':
-            //#endregion DIGIT
-            case '9':
-                if (this.lastAre(["number", "identifier"])) this.last.content += c;
-                else this.push("number", c);
-                break;
+                //#region DIGIT
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                    case '8':
+                //#endregion DIGIT
+                case '9':
+                    if (this.lastAre(["number", "identifier"])) this.last.content += c;
+                    else this.push("number", c);
+                    break;
 
-            case '\n':
-                this.replacePossibleKeyword();
-                if (this.lastIs("backslash")) this.replaceLast("hidden", "\n");
-                else this.push("newline", c);
-                break;
+                case '\n':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("backslash")) this.replaceLast("hidden", "\n");
+                    else this.push("newline", c);
+                    this.isNewline = true;
+                    break;
 
-            case ' ':
-            case '\t':
-                this.replacePossibleKeyword();
-                if (this.lastIs("whitespace")) this.last.content += c;
-                else this.push("whitespace", c);
-                break;
+                case ' ':
+                case '\t':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("whitespace")) this.last.content += c;
+                    else this.push("whitespace", c);
+                    break;
 
-            case '\\':
-                this.replacePossibleKeyword();
-                this.push("backslash", c);
-                break;
+                case '\\':
+                    this.replacePossibleKeyword();
+                    this.push("backslash", c);
+                    break;
 
-            case "#":
-                this.replacePossibleKeyword();
-                if      (this.lastIs("slash"))             this.replaceLast("singleLineComment", "/#");
-                else if (this.lastIs("singleLineComment")) this.replaceLast("lMultiLineComment", "/##");
-                else if (this.lastIs("hash"))              this.replaceLast("hashHash", "##");
-                else                                       this.push("hash", c);
-                break;
+                case "#":
+                    this.replacePossibleKeyword();
+                    if      (this.lastIs("slash"))             this.replaceLast("singleLineComment", "/#");
+                    else if (this.lastIs("singleLineComment")) this.replaceLast("lMultiLineComment", "/##");
+                    else if (this.lastIs("hash"))              this.replaceLast("hashHash", "##");
+                    else                                       this.push("hash", c);
+                    break;
 
-            case '(':
-                this.replacePossibleKeyword();
-                if (this.lastIs("hash")) this.replaceLast("hashLParens", '#(');
-                else this.push("lParens", c);
-                break;
+                case '(':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("hash")) this.replaceLast("hashLParens", '#(');
+                    else this.push("lParens", c);
+                    break;
 
-            case ')':
-                this.replacePossibleKeyword();
-                this.push("rParens", c);
-                break;
+                case ')':
+                    this.replacePossibleKeyword();
+                    this.push("rParens", c);
+                    break;
 
-            case '[':
-                this.replacePossibleKeyword();
-                if (this.lastIs("hash")) this.replaceLast("hashLBracket", '#[');
-                else this.push("lBracket", c);
-                break;
+                case '[':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("hash")) this.replaceLast("hashLBracket", '#[');
+                    else this.push("lBracket", c);
+                    break;
 
-            case ']':
-                this.replacePossibleKeyword();
-                this.push("rBracket", c);
-                break;
+                case ']':
+                    this.replacePossibleKeyword();
+                    this.push("rBracket", c);
+                    break;
 
-            case '{':
-                this.replacePossibleKeyword();
-                if (this.lastIs("hash")) this.replaceLast("hashLBrace", '#{');
-                else this.push("lBrace", c);
-                break;
+                case '{':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("hash")) this.replaceLast("hashLBrace", '#{');
+                    else this.push("lBrace", c);
+                    break;
 
-            case '}':
-                this.replacePossibleKeyword();
-                this.push("rBrace", c);
-                break;
+                case '}':
+                    this.replacePossibleKeyword();
+                    this.push("rBrace", c);
+                    break;
 
-            case '<':
-                this.replacePossibleKeyword();
-                if (this.lastIs("hash")) this.replaceLast("hashLessThan", "#<");
-                else this.push("lessThan", c);
-                break;
+                case '<':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("hash")) this.replaceLast("hashLessThan", "#<");
+                    else this.push("lessThan", c);
+                    break;
 
-            case '>':
-                this.replacePossibleKeyword();
-                if (this.lastIs("minus")) this.replaceLast("thinArrow", "->");
-                else this.push("greaterThan", ">");
-                break;
+                case '>':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("minus")) this.replaceLast("thinArrow", "->");
+                    else this.push("greaterThan", ">");
+                    break;
 
-            case '.':
-                this.replacePossibleKeyword();
-                if (this.lastIs("dot"))         this.replaceLast("dotDot", "..");
-                else if (this.lastIs("dotDot")) this.replaceLast("dotDotDot", "...");
-                else                            this.push("dot", '.');
-                break;
+                case '.':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("dot"))         this.replaceLast("dotDot", "..");
+                    else if (this.lastIs("dotDot")) this.replaceLast("dotDotDot", "...");
+                    else                            this.push("dot", '.');
+                    break;
 
-            case '=':
-                this.replacePossibleKeyword();
-                const eq = equalize(this.last?.kind);
-                if (isNull(eq)) this.push("equals", '=');
-                else this.replaceLast(...eq);
-                break;
+                case '=':
+                    this.replacePossibleKeyword();
+                    const eq = equalize(this.last?.kind);
+                    if (isNull(eq)) this.push("equals", '=');
+                    else this.replaceLast(...eq);
+                    break;
 
-            case '+':
-                this.replacePossibleKeyword();
-                if (this.lastIs("plus")) this.replaceLast("plusPlus", "++");
-                else                     this.push("plus", c);
-                break;
+                case '+':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("plus")) this.replaceLast("plusPlus", "++");
+                    else                     this.push("plus", c);
+                    break;
 
-            case '-':
-                this.replacePossibleKeyword();
-                if (this.lastIs("minus")) this.replaceLast("minusMinus", "--");
-                else                      this.push("minus", c);
-                break;
+                case '-':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("minus")) this.replaceLast("minusMinus", "--");
+                    else                      this.push("minus", c);
+                    break;
 
-            case '*':
-                this.replacePossibleKeyword();
-                if (this.lastIs("asterisk")) this.replaceLast("asteriskAsterisk", "**");
-                else                         this.push("asterisk", c);
-                break;
+                case '*':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("asterisk")) this.replaceLast("asteriskAsterisk", "**");
+                    else                         this.push("asterisk", c);
+                    break;
 
-            case '/':
-                this.replacePossibleKeyword();
-                if (this.lastIs("slash"))         this.replaceLast("slashSlash", "//");
-                else if (this.lastIs("hashHash")) this.replaceLast('rMultiLineComment', "##/");
-                else                              this.push("slash", c);
-                break;
+                case '/':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("slash"))         this.replaceLast("slashSlash", "//");
+                    else if (this.lastIs("hashHash")) this.replaceLast('rMultiLineComment', "##/");
+                    else                              this.push("slash", c);
+                    break;
 
-            case '%':
-                this.replacePossibleKeyword();
-                if (this.lastIs("percent")) this.replaceLast("percentPercent", "%%");
-                else                        this.push("percent", c);
-                break;
+                case '%':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("percent")) this.replaceLast("percentPercent", "%%");
+                    else                        this.push("percent", c);
+                    break;
 
-            case '&':
-                this.replacePossibleKeyword();
-                if (this.lastIs("ampersand")) this.replaceLast("ampAmp", "&&");
-                else                          this.push("ampersand", c);
-                break;
+                case '&':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("ampersand")) this.replaceLast("ampAmp", "&&");
+                    else                          this.push("ampersand", c);
+                    break;
 
-            case '|':
-                this.replacePossibleKeyword();
-                if (this.lastIs("pipe")) this.replaceLast("pipePipe", "||");
-                else                     this.push("pipe", c);
-                break;
+                case '|':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("pipe")) this.replaceLast("pipePipe", "||");
+                    else                     this.push("pipe", c);
+                    break;
 
-            case '@':
-                this.replacePossibleKeyword();
-                this.push("at", c);
-                break;
+                case '@':
+                    this.replacePossibleKeyword();
+                    this.push("at", c);
+                    break;
 
-            case '!':
-                this.replacePossibleKeyword();
-                this.push("em", c);
-                break;
+                case '!':
+                    this.replacePossibleKeyword();
+                    this.push("em", c);
+                    break;
 
-            case '?':
-                this.replacePossibleKeyword();
-                if (this.lastIs("qm")) this.replaceLast("qmqm", "??");
-                else                   this.push("qm", c);
-                break;
+                case '?':
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("qm")) this.replaceLast("qmqm", "??");
+                    else                   this.push("qm", c);
+                    break;
 
-            case ':':
-                this.replacePossibleKeyword();
-                this.push("colon", c);
-                break;
+                case ':':
+                    this.replacePossibleKeyword();
+                    this.push("colon", c);
+                    break;
 
-            case ';':
-                this.replacePossibleKeyword();
-                this.push("semiColon", c);
-                break;
+                case ';':
+                    this.replacePossibleKeyword();
+                    this.push("semiColon", c);
+                    break;
 
-            case ',':
-                this.replacePossibleKeyword();
-                this.push("comma", c);
-                break;
+                case ',':
+                    this.replacePossibleKeyword();
+                    this.push("comma", c);
+                    break;
 
-            case '\'':
-                this.replacePossibleKeyword();
-                this.push("quote", c);
-                break;
+                case '\'':
+                    this.replacePossibleKeyword();
+                    this.push("quote", c);
+                    break;
 
-            case '"':
-                this.replacePossibleKeyword();
-                this.push("doubleQuote", c);
-                break;
+                case '"':
+                    this.replacePossibleKeyword();
+                    this.push("doubleQuote", c);
+                    break;
+
+                default:
+                    this.replacePossibleKeyword();
+                    if (this.lastIs("unknown")) this.last.content += c;
+                    else this.push("unknown", c);
+                    break;
+            }
+            this.incrementPos();
         }
-
         return this.first;
     }
 }

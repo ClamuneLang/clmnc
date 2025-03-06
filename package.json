@@ -22,6 +22,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
-    "@types/node": "^22.13.8"
+    "@types/node": "^22.13.9"
+  },
+  "dependencies": {
+    "jison": "^0.4.18"
   }
 }
