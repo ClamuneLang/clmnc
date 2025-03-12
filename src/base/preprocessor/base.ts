@@ -56,7 +56,7 @@ export class Preprocessor {
                     join(file, p) :
                     join(this.mainLibDir, p);
             } else finalPath = p;
-            finalPath += ".esp";
+            finalPath += ".clmn";
 
             if (this.visitedFiles.has(finalPath)) {
                 t.leaveChainUntil("newline");

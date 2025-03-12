@@ -1,4 +1,4 @@
-# Espresso
+# Clamune
 is a middle-level general-purpose programming language with "- CR - RE - EC -" philosofy: *- Code Rapidly - Read Easily - Ensue Compiled*
 
 This language was inspired mostly by CoffeeScript, TypeScript, C++ and C#; (And originally was planning for fun. But now I'm sure it may be a nice language for serious project)
@@ -6,7 +6,7 @@ This language was inspired mostly by CoffeeScript, TypeScript, C++ and C#; (And 
 There is the simple syntax and syntax sugar, for sure
 Here's simple program - Hello world!
 
-```espresso
+```clmn
 #import io
 
 @io.Main()
@@ -22,8 +22,8 @@ What's happening here? Let's take a look at each line:
 `   io.out "Hello world!";` This is the interesting one. `io.out` here is a function. And if after the function identifier there is a whitespace with arguments (which can be separated with a comma) it is function call; indentation matters as it creates a new scope in declarations
 
 Or another example: Decorator-logger
-Let's say we have file `logger.esp`
-```espresso
+Let's say we have file `logger.clmn`
+```clmn
 #import io
 
 decorator Logging(arg: string): func
@@ -31,8 +31,8 @@ decorator Logging(arg: string): func
     this();
 ```
 
-And file `main.esp`
-```espresso
+And file `main.clmn`
+```clmn
 #import ./main
 
 @io.Main()
@@ -51,12 +51,12 @@ Meow
 ```
 
 ## Current state
-Now espresso version is 33% done. Or to be more precise - Tokenizer/Lexer and Preprocessor. We are going to make next stages: Parser (AST builder), semantic analyzer with Bison/Jison, and builder with LLVM
+Now clmn version is 33% done. Or to be more precise - Tokenizer/Lexer and Preprocessor. We are going to make next stages: Parser (AST builder), semantic analyzer written by hand, and builder with LLVM
 
 And assuming me, the new one in programing language creation, there may be some mistakes. Feel free to help this project developing, Issues and Pull Requests are open. I hope you will like that language
 
 Here are other examples
-```espresso
+```clmn
 #import json
 #import io
 
@@ -92,7 +92,7 @@ Expecting output (without whitespaces):
 }
 ```
 
-```espresso
+```clmn
 #import io
 #import promise
 

@@ -26,7 +26,7 @@ Foo barFoo() {
 } // namespace qwe
 ```
 
-# In Espresso
+# In Clamune
 Use camelCase in functions, variables; PascalCase in class names, interfaces, types, decorators; lowercase in namespaces.
 
 Semicolon is required. If expression is ended, if it's not non-parens object or array declaration
@@ -34,7 +34,7 @@ Indentation, whitespace, newlines matter!
 
 Decorators are written above their targets, except for parameters decorators
 Macros are primarily UPPER_SNAKE_CASE
-```esp
+```clmn
 #set FOURTY_TWO 42
 
 namespace qwe.rty

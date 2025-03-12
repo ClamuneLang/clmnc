@@ -1,21 +1,21 @@
 {
-  "name": "espc",
+  "name": "clmn",
   "version": "0.1.0",
-  "description": "Main espresso compiler",
+  "description": "Main clamune compiler",
   "keywords": [
-    "espresso",
+    "clamune",
     "compiler"
   ],
-  "homepage": "https://github.com/EspressoLang/espc#readme",
+  "homepage": "https://github.com/ClamuneLang/espc#readme",
   "bugs": {
-    "url": "https://github.com/EspressoLang/espc/issues"
+    "url": "https://github.com/ClamuneLang/espc/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/EspressoLang/espc.git"
+    "url": "git+https://github.com/ClamuneLang/espc.git"
   },
   "license": "MIT",
-  "author": "EspressoLang Team",
+  "author": "ClamuneLang Team",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
@@ -23,8 +23,5 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.9"
-  },
-  "dependencies": {
-    "jison": "^0.4.18"
   }
 }

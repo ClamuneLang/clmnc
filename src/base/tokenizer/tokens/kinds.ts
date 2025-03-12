@@ -59,8 +59,8 @@ export const kinds = [
     "this",       "super",       "const",      "let",       "is",      "isnt",        "not",
     "in",         "using",       "await",      "async",     "switch",  "try",         "catch",
     "finally",    "enum",        "record",     "new",       "break",   "skip",        "goto",
-    "step",       "continue",    "return",     "as",        "type",    "constructor",
-    "destructor", "get",         "set",        "public",    "private", "protected",
+    "step",       "continue",    "return",     "as",        "type",    "constructor", "just",
+    "destructor", "get",         "set",        "public",    "private", "protected",   "void",
     "abstract",   "final",       "static",     "null",      "true",    "false",
     "yes",        "no",          "on",         "off",
     // ! Please, do not add other enum members below the keywords as they will be interpreted as keywords
